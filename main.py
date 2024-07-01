@@ -1,65 +1,41 @@
-import datetime
-from enum import Enum
-from typing import List, Optional
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi_users import fastapi_users, FastAPIUsers
 from pydantic import BaseModel, Field
 
+from auth.auth import auth_backend
+from auth.database import User
+from auth.manager import get_user_manager
+from auth.schemas import UserRead, UserCreate
+
 app = FastAPI(
-    title="my_app"
+    title="trading app"
 )
 
+fastapi_users = FastAPIUsers[User, int](
+    get_user_manager,
+    [auth_backend],
+)
 
-# possible set of variables
-class DegreeType(Enum):
-    jun = 'junior'
-    mid = 'middle'
-    sen = 'senior'
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
 
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
 
-class Degree(BaseModel):
-    id: int
-    type: DegreeType
-
-
-# model
-class Trade(BaseModel):
-    id: int
-    currency: str = Field(max_length=20)  # something like parameters in django's models
-    proces: str
-    market: str
-    rating: int = Field(ge=0)  # gives the opportunity to install the borders in user's request (ge - greater or equels)
-    degree: Optional[Degree]  # class, which defines contains variables of degree
+current_user = fastapi_users.current_user()
 
 
-db_users = [
-    {'id': 1, 'name': "Max", 'role': 'programmer'},
-    {'id': 2, 'name': "Petya", 'role': 'petuh'},
-    {'id': 3, 'name': "Dima", 'role': 'striper'},
-    {'id': 4, 'name': "Ian", 'role': 'trader'}
-]
-
-db_trades = [
-    {'id': 1, 'currency': 'BTC', 'proces': 'buy', 'market': 'Binance'},
-    {'id': 2, 'currency': 'ETH', 'proces': 'sell', 'market': 'Bybit'},
-    {'id': 3, 'currency': 'NOT', 'proces': 'buy', 'market': 'BingX', 'degree': {'id': 1, 'type': 'senior'}}
-]
+@app.get("/protected-route")
+def protected_route(user: User = Depends(current_user)):
+    return f"Hello, {user.username}"
 
 
-@app.get("/users/{user_id}")
-def get_user(user_id: int):
-    return [user['name'] for user in db_users if user.get('id') == user_id]
-
-
-@app.post("/users/{user_id}}")
-def change_name(user_id: int, new_name: str):
-    current_user = list(filter(lambda user: user.get('id') == user_id, db_users))[0]
-    current_user['name'] = new_name
-    return {'status': 200, 'info': new_name}
-
-
-# List[Trade] forms from model list and forms value trades, then add it to db_trades
-@app.post('/trades')
-def add_trade(trades: List[Trade]):
-    db_trades.extend(trades)
-    return {'status': 200, 'info': db_trades}
+@app.get("/unprotected-route")
+def unprotected_route():
+    return f"Hello, anonym"
