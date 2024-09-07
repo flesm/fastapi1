@@ -32,7 +32,7 @@ app = FastAPI(
 @app.get("/")
 @cache(expire=60)
 async def index():
-    return dict(hello="world")
+    return dict(hello="world!")
 
 
 app.include_router(
