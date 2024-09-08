@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from auth.schemas import UserRead, UserCreate
 
 from operations.router import router as router_operation
+from tasks.router import router as router_tasks
 from auth.base_config import fastapi_users, auth_backend
 
 from collections.abc import AsyncIterator
@@ -48,3 +49,4 @@ app.include_router(
 )
 
 app.include_router(router_operation)
+app.include_router(router_tasks)
