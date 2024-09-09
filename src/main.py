@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from auth.schemas import UserRead, UserCreate
 
 from operations.router import router as router_operation
 from tasks.router import router as router_tasks
+from pages.router import router as router_pages
 from auth.base_config import fastapi_users, auth_backend
 
 from collections.abc import AsyncIterator
@@ -30,11 +32,7 @@ app = FastAPI(
     lifespan=lifespan,  # for cache
 )
 
-
-@app.get("/")
-@cache(expire=60)
-async def index():
-    return dict(hello="world!")
+app.mount("/src/static", StaticFiles(directory="src/static"), name="static")
 
 
 app.include_router(
@@ -51,6 +49,7 @@ app.include_router(
 
 app.include_router(router_operation)
 app.include_router(router_tasks)
+app.include_router(router_pages)
 
 origins = [
     "http://localhost:3000",
